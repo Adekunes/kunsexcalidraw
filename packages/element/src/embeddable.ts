@@ -23,8 +23,11 @@ type IframeDataWithSandbox = MarkRequired<IframeData, "sandbox">;
 
 const embeddedLinkCache = new Map<string, IframeDataWithSandbox>();
 
+// `v=` / `list=` need not be the first query param (e.g. `watch?app=desktop&v=`
+// as emitted by YouTube's mobile → desktop redirect), so allow preceding ones.
+// `embed/videoseries?list=` must come before `embed/` or it never matches.
 const RE_YOUTUBE =
-  /^(?:http(?:s)?:\/\/)?(?:www\.)?youtu(?:be\.com|\.be)\/(embed\/|watch\?v=|shorts\/|live\/|playlist\?list=|embed\/videoseries\?list=)?([a-zA-Z0-9_-]+)/;
+  /^(?:http(?:s)?:\/\/)?(?:www\.)?youtu(?:be\.com|\.be)\/(embed\/videoseries\?(?:[^#\s]*?&)??list=|embed\/|watch\?(?:[^#\s]*?&)??v=|shorts\/|live\/|playlist\?(?:[^#\s]*?&)??list=)?([a-zA-Z0-9_-]+)/;
 
 const RE_VIMEO =
   /^(?:http(?:s)?:\/\/)?(?:(?:w){3}\.)?(?:player\.)?vimeo\.com\/(?:video\/)?([^?\s]+)(?:\?.*)?$/;
@@ -201,20 +204,12 @@ export const getEmbedLink = (
     const time = startTime > 0 ? `&start=${startTime}` : ``;
     const isPortrait = link.includes("shorts");
     type = "video";
-    switch (ytLink[1]) {
-      case "embed/":
-      case "watch?v=":
-      case "shorts/":
-        link = `https://www.youtube.com/embed/${ytLink[2]}?enablejsapi=1${time}`;
-        break;
-      case "playlist?list=":
-      case "embed/videoseries?list=":
-        link = `https://www.youtube.com/embed/videoseries?list=${ytLink[2]}&enablejsapi=1${time}`;
-        break;
-      default:
-        link = `https://www.youtube.com/embed/${ytLink[2]}?enablejsapi=1${time}`;
-        break;
-    }
+    const isPlaylist =
+      ytLink[1]?.startsWith("playlist?") ||
+      ytLink[1]?.startsWith("embed/videoseries?");
+    link = isPlaylist
+      ? `https://www.youtube.com/embed/videoseries?list=${ytLink[2]}&enablejsapi=1${time}`
+      : `https://www.youtube.com/embed/${ytLink[2]}?enablejsapi=1${time}`;
     aspectRatio = isPortrait ? { w: 315, h: 560 } : { w: 560, h: 315 };
     embeddedLinkCache.set(originalLink, {
       link,

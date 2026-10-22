@@ -107,6 +107,42 @@ describe("YouTube timestamp parsing", () => {
     }
   });
 
+  it("should handle watch URLs where `v` is not the first query param", () => {
+    const testCases = [
+      {
+        url: "https://www.youtube.com/watch?app=desktop&v=dQw4w9WgXcQ",
+        expectedLink: "https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1",
+      },
+      {
+        url: "https://www.youtube.com/watch?feature=shared&v=dQw4w9WgXcQ&t=1m30s",
+        expectedLink:
+          "https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1&start=90",
+      },
+      {
+        url: "https://www.youtube.com/watch?list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ&v=dQw4w9WgXcQ",
+        expectedLink: "https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1",
+      },
+      {
+        url: "https://www.youtube.com/playlist?app=desktop&list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ",
+        expectedLink:
+          "https://www.youtube.com/embed/videoseries?list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ&enablejsapi=1",
+      },
+      {
+        url: "https://www.youtube.com/embed/videoseries?list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ",
+        expectedLink:
+          "https://www.youtube.com/embed/videoseries?list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ&enablejsapi=1",
+      },
+    ];
+
+    testCases.forEach(({ url, expectedLink }) => {
+      const result = getEmbedLink(url);
+      expect(result?.type).toBe("video");
+      if (result?.type === "video" || result?.type === "generic") {
+        expect(result.link).toBe(expectedLink);
+      }
+    });
+  });
+
   it("should handle playlist URLs with timestamps", () => {
     const url =
       "https://www.youtube.com/playlist?list=PLrAXtmRdnEQy1KbG5lbfgQ0-PKQY6FKYZ&t=60";
